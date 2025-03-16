@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reflexão</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f8;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            position: relative;
+        }
+
+        .clear-button {
+            position: absolute;
+            top: 5px;
+            /* Mais para cima */
+            right: 8px;
+            border: none;
+            background: none;
+            font-size: 1.2rem;
+            /* Menor */
+            cursor: pointer;
+            color: #666;
+        }
+
+        .clear-button:hover {
+            color: #d32f2f;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        textarea {
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+            width: 100%;
+            resize: none;
+            overflow: hidden;
+            line-height: 1.4;
+            min-height: 40px;
+        }
+
+        .proposicao-display {
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+            line-height: 1.4;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+        }
+
+        button {
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button[type="submit"] {
+            background: #4CAF50;
+            color: #fff;
+            border: none;
+        }
+
+        button[type="submit"]:hover {
+            background: #45a049;
+        }
+
+        .axioms {
+            margin-top: 30px;
+        }
+
+        .axioms h3 {
+            margin-bottom: 15px;
+            color: #4CAF50;
+        }
+
+        .axiom {
+            background: #e9f7ef;
+            padding: 10px;
+            border-left: 4px solid #4CAF50;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+
+            textarea,
+            .proposicao-display,
+            button {
+                font-size: 0.9rem;
+            }
+
+            .clear-button {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <button class="clear-button" onclick="confirmClear()">🗑️</button>
+        <div id="form-container"></div>
+        <div id="axioms-container" class="axioms" style="display: none;">
+            <h3>Axiomas</h3>
+            <div id="axioms-list"></div>
+        </div>
+    </div>
+
+    <script>
+        function createNode(proposicao, editableProposicao = false) {
+            return { proposicao: proposicao || '', por_que_sim: '', por_que_nao: '', editableProposicao: editableProposicao };
+        }
+
+        let pendingNodes = JSON.parse(localStorage.getItem('pendingNodes')) || [createNode('', true)];
+        let axioms = JSON.parse(localStorage.getItem('axioms')) || [];
+
+        function saveToLocalStorage() {
+            localStorage.setItem('pendingNodes', JSON.stringify(pendingNodes));
+            localStorage.setItem('axioms', JSON.stringify(axioms));
+        }
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.max(textarea.scrollHeight, 40) + 'px';
+        }
+
+        function renderForm() {
+            const container = document.getElementById('form-container');
+            container.innerHTML = '';
+
+            if (pendingNodes.length === 0) {
+                container.innerHTML = '<p>Todos os objetos foram preenchidos.</p>';
+                return;
+            }
+
+            const currentNode = pendingNodes[0];
+            const form = document.createElement('form');
+
+            const proposicaoLabel = document.createElement('label');
+            proposicaoLabel.textContent = 'Proposição:';
+            form.appendChild(proposicaoLabel);
+
+            if (currentNode.editableProposicao) {
+                const proposicaoArea = document.createElement('textarea');
+                proposicaoArea.name = 'proposicao';
+                proposicaoArea.value = currentNode.proposicao;
+                proposicaoArea.addEventListener('input', () => autoResize(proposicaoArea));
+                autoResize(proposicaoArea);
+                form.appendChild(proposicaoArea);
+            } else {
+                const proposicaoParagraph = document.createElement('p');
+                proposicaoParagraph.textContent = currentNode.proposicao;
+                proposicaoParagraph.className = 'proposicao-display';
+                form.appendChild(proposicaoParagraph);
+            }
+
+            const simLabel = document.createElement('label');
+            simLabel.textContent = 'Por que sim:';
+            const simArea = document.createElement('textarea');
+            simArea.name = 'por_que_sim';
+            simArea.value = currentNode.por_que_sim;
+            simArea.addEventListener('input', () => autoResize(simArea));
+            autoResize(simArea);
+            form.appendChild(simLabel);
+            form.appendChild(simArea);
+
+            const naoLabel = document.createElement('label');
+            naoLabel.textContent = 'Por que não:';
+            const naoArea = document.createElement('textarea');
+            naoArea.name = 'por_que_nao';
+            naoArea.value = currentNode.por_que_nao;
+            naoArea.addEventListener('input', () => autoResize(naoArea));
+            autoResize(naoArea);
+            form.appendChild(naoLabel);
+            form.appendChild(naoArea);
+
+            const submitButton = document.createElement('button');
+            submitButton.type = 'submit';
+            submitButton.textContent = 'Enviar';
+            form.appendChild(submitButton);
+
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+
+                const proposicaoVal = currentNode.editableProposicao
+                    ? form.elements['proposicao'].value.trim()
+                    : currentNode.proposicao;
+                const porQueSimVal = simArea.value.trim();
+                const porQueNaoVal = naoArea.value.trim();
+
+                currentNode.proposicao = proposicaoVal;
+                currentNode.por_que_sim = porQueSimVal;
+                currentNode.por_que_nao = porQueNaoVal;
+
+                if (porQueSimVal === '' && porQueNaoVal === '') {
+                    axioms.push(currentNode);
+                } else {
+                    if (porQueSimVal !== '') pendingNodes.push(createNode(porQueSimVal, false));
+                    if (porQueNaoVal !== '') pendingNodes.push(createNode(porQueNaoVal, false));
+                }
+
+                pendingNodes.shift();
+                saveToLocalStorage();
+                renderForm();
+                updateAxiomsList();
+            });
+
+            container.appendChild(form);
+        }
+
+        function updateAxiomsList() {
+            const axiomsContainer = document.getElementById('axioms-container');
+            const axiomsList = document.getElementById('axioms-list');
+            axiomsContainer.style.display = axioms.length ? 'block' : 'none';
+            axiomsList.innerHTML = '';
+            axioms.forEach(axiom => {
+                const div = document.createElement('div');
+                div.className = 'axiom';
+                div.textContent = axiom.proposicao;
+                axiomsList.appendChild(div);
+            });
+        }
+
+        function confirmClear() {
+            if (confirm("Tem certeza que deseja limpar tudo?")) {
+                localStorage.clear();
+                pendingNodes = [createNode('', true)];
+                axioms = [];
+                renderForm();
+                updateAxiomsList();
+            }
+        }
+
+        renderForm();
+        updateAxiomsList();
+    </script>
+</body>
+
+</html>
